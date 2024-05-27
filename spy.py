@@ -121,7 +121,7 @@ async def clear_data(event):
     await event.respond('Data has been cleared')
 
 @bot.on(events.NewMessage(pattern='^/start$'))
-async def start(event): # pylint: disable=too-many-branches,too-many-statements
+async def start(event):
     """async def start(event):"""
     message = event.message
     _id = message.chat_id
@@ -161,30 +161,24 @@ async def start(event): # pylint: disable=too-many-branches,too-many-statements
                     if contact.last_online is not None:
                         wol = get_interval(contact.last_offline - contact.last_online)
                     await event.respond(f'{wol}> {contact.name} went online.')
-            elif isinstance(account.status, UserStatusOffline):
+            else:
+                _user_offline=isinstance(account.status, UserStatusOffline)
+                _now = datetime.now(timezone.utc)
                 if contact.online is True:
                     contact.online = False
-                    contact.last_online = account.status.was_online
+                    contact.last_online = account.status.was_online if _user_offline else _now
                     wol='unknown online time'
                     if contact.last_offline is not None:
                         wol = get_interval(contact.last_online - contact.last_offline)
-                    await event.respond(f'{wol}> {contact.name} went offline.')
-                contact.last_offline = None
-            else:
-                if contact.online is True:
-                    contact.online = False
-                    contact.last_online = datetime.now(timezone.utc)
-                    wol='unknown online time'
-                    if contact.last_offline is not None:
-                        wol = get_interval(contact.last_online - contact.las_offline)
-                    await event.respond(f'DEBUG: {wol}> {contact.name} went undefined=>offline.')
-                    contact.last_offline = None
+                    await event.respond(f'{wol}> {contact.name} went offline.' if _user_offline \
+                                   else f'DEBUG: {wol}> {contact.name} went undefined=>offline.')
+                contact.last_offline = _now
         delay = 5
         if 'delay' in user_data:
             delay = user_data['delay']
         sleep(delay)
     user_data['is_running'] = False
-    await event.respond('Spy gonna zzzzzz...')  # (f'Spy gonna zzzzzz...')
+    await event.respond('Spy gonna zzzzzz...')
 
 @bot.on(events.NewMessage(pattern='^/add'))
 async def add(event):
@@ -216,6 +210,9 @@ async def remove(event):
     message = event.message
     person_info = message.message.split()
     print(person_info)
+    if len(person_info) < 2:
+        await event.respond('Missing index. Show indexes by /list')
+        return
     index = int(person_info[1])
     _id = message.chat_id
     if _id not in data:
